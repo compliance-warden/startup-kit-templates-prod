@@ -14,7 +14,7 @@ Parameters:
     AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
 
   DatabaseUser:
-    Default: startupadmin
+    Default: YOUR_CUSTOM_ADMIN_USERNAME
     Type: String
     Description: Database admin account name
     MinLength: 5
@@ -181,6 +181,10 @@ Resources:
     Condition: AlarmsEnabled
     Properties:
       DisplayName: Database Alarm Topic
+      KmsMasterKeyId: YOUR_KMS_KEY_ID
+      Tags:
+        - Key: YOUR_TAG_KEY
+          Value: YOUR_TAG_VALUE
 
   DatabaseSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -203,7 +207,7 @@ Resources:
       StorageEncrypted: !Ref EncryptionAtRest
       DatabaseName: !Ref DatabaseName
       DBClusterParameterGroupName: !If [ IsAuroraMySQL,  default.aurora5.6, default.aurora-postgresql9.6 ]
-      Port: !If [ IsAuroraMySQL,  3306, 5432 ]
+      Port: YOUR_CUSTOM_PORT
       VpcSecurityGroupIds:
         - Fn::ImportValue: !Sub ${NetworkStackName}-DatabaseGroupID
       DeletionProtection: true
