@@ -1,4 +1,3 @@
----
 AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
@@ -39,6 +38,10 @@ Resources:
       Subscription:
       - Endpoint: !Ref Email
         Protocol: email
+      KmsMasterKeyId: YOUR_KMS_KEY_ID
+      Tags:
+        - Key: YOUR_TAG_KEY
+          Value: YOUR_TAG_VALUE
 
 Outputs:
 

@@ -1,9 +1,6 @@
----
 AWSTemplateFormatVersion: 2010-09-09
 
-
 Description: SASKV5 VPC + Bastion
-
 
 Parameters:
 
@@ -54,7 +51,6 @@ Parameters:
     Type: Number
     Default: 90
 
-  # For more information on the google-authenticator PAM module, see: https://github.com/google/google-authenticator-libpam
   MFA:
     Description: Set to true to install MFA using the google-authenticator PAM module on your bastion host
     Type: String
@@ -121,11 +117,9 @@ Metadata:
       SSHFrom:
         default: SSH Whitelist
 
-
 Conditions:
 
    IsProd: !Equals [ !Ref EnvironmentName, prod ]
-
 
 Resources:
 
@@ -140,6 +134,11 @@ Resources:
         ELBIngressPort: !Ref ELBIngressPort
         AppIngressPort: !Ref AppIngressPort
         SingleNatGateway: !If [ IsProd, false, true ]
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Project
+          Value: YOUR_PROJECT_NAME
 
   BastionStack:
     Type: AWS::CloudFormation::Stack
@@ -150,8 +149,12 @@ Resources:
         KeyName: !Ref KeyName
         LogRetentionInDays: !Ref LogRetentionInDays
         MFA: !Ref MFA
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Project
+          Value: YOUR_PROJECT_NAME
     DependsOn: VpcStack
-
 
 Outputs:
 
@@ -164,5 +167,3 @@ Outputs:
     Value: !GetAtt BastionStack.Outputs.Name
     Export:
       Name: !Sub ${AWS::StackName}-BastionStackName
-
-

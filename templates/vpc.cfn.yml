@@ -1,4 +1,3 @@
----
 AWSTemplateFormatVersion: 2010-09-09
 
 Description: SASKV5N VPC
@@ -104,6 +103,16 @@ Resources:
       - Key: Name
         Value: !Ref "AWS::StackName"
 
+  VPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      ResourceId: !Ref VPC
+      ResourceType: VPC
+      TrafficType: ALL
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: YOUR_LOG_GROUP_NAME
+      DeliverLogsPermissionArn: arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_IAM_ROLE
+
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -200,13 +209,17 @@ Resources:
   ELBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP/HTTPs ingress
+      GroupDescription: Enable HTTP/HTTPS ingress
       VpcId: !Ref VPC
       SecurityGroupIngress:
-      - CidrIp: 0.0.0.0/0
+      - CidrIp: YOUR_ALLOWED_IP_RANGE
         IpProtocol: tcp
-        ToPort: !Ref ELBIngressPort
-        FromPort: !Ref ELBIngressPort
+        ToPort: 80
+        FromPort: 80
+      - CidrIp: YOUR_ALLOWED_IP_RANGE
+        IpProtocol: tcp
+        ToPort: 443
+        FromPort: 443
       Tags:
       - Key: Name
         Value: !Sub "${AWS::StackName}-ELBSecurityGroup"
@@ -266,19 +279,7 @@ Resources:
         IpProtocol: tcp
         ToPort: 22
         FromPort: 22
-      SecurityGroupEgress:
-      - CidrIp: 0.0.0.0/0
-        IpProtocol: tcp
-        ToPort: 80
-        FromPort: 80
-      - CidrIp: 0.0.0.0/0
-        IpProtocol: tcp
-        ToPort: 443
-        FromPort: 443
-      - CidrIp: 0.0.0.0/0
-        IpProtocol: udp
-        ToPort: 123
-        FromPort: 123
+      SecurityGroupEgress: [] # Clear any unrestricted outbound traffic
       Tags:
       - Key: Name
         Value: !Sub "${AWS::StackName}-BastionSecurityGroup"
@@ -451,6 +452,66 @@ Resources:
       SubnetId: !Ref PrivateSubnet2
       RouteTableId: !Ref NatRouteTable2
 
+  ECRVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.api"
+      VpcId: !Ref VPC
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !Ref ECREndpointSecurityGroup
+
+  DockerRegistryVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.dkr"
+      VpcId: !Ref VPC
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !Ref ECREndpointSecurityGroup
+
+  SSMVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcId: !Ref VPC
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  SSMIncidentManagerContactsVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm-contacts"
+      VpcId: !Ref VPC
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  SSMIncidentManagerVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm-incidents"
+      VpcId: !Ref VPC
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
 Outputs:
 
   Name:
@@ -530,4 +591,3 @@ Outputs:
     Value: !Ref AppIngressPort
     Export:
       Name: !Sub "${AWS::StackName}-AppIngressPort"
-

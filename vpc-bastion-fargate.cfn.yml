@@ -1,4 +1,3 @@
----
 AWSTemplateFormatVersion: 2010-09-09
 
 
@@ -245,6 +244,14 @@ Parameters:
       - true
       - false
 
+  UseSSMParameterStore:
+    Type: String
+    Description: Use SSM Parameter Store for sensitive environment variables
+    Default: true
+    AllowedValues:
+      - true
+      - false
+      
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -444,6 +451,75 @@ Resources:
         LoadBalancerAlarmEvaluationPeriods: !Ref LoadBalancerAlarmEvaluationPeriods
     DependsOn: VpcStack
 
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Environment:
+        Type: LINUX_CONTAINER
+        Image: !Ref CodeBuildDockerImage
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: AWS_ACCESS_KEY_ID
+            Value: "/ssm/parameter/path/AWS_ACCESS_KEY_ID"
+            Type: PARAMETER_STORE
+          - Name: AWS_SECRET_ACCESS_KEY
+            Value: "/ssm/parameter/path/AWS_SECRET_ACCESS_KEY"
+            Type: PARAMETER_STORE
+
+  DefaultSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Default security group with no inbound/outbound rules
+      VpcId: !Ref YOUR_VPC_ID
+      SecurityGroupIngress: []
+      SecurityGroupEgress: []
+
+  VPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      ResourceId: !Ref YOUR_VPC_ID
+      ResourceType: VPC
+      TrafficType: ALL
+      LogGroupName: !Ref YOUR_LOG_GROUP_NAME
+      DeliverLogsPermissionArn: !Ref YOUR_IAM_ROLE_ARN
+
+  MySubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref YOUR_VPC_ID
+      CidrBlock: YOUR_CIDR_BLOCK
+      MapPublicIpOnLaunch: false
+
+  mySecureSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Secure group
+      VpcId: !Ref YOUR_VPC_ID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref YOUR_ALLOWED_IP_RANGE
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref YOUR_ALLOWED_IP_RANGE
+
+  SecureSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: High risk port restriction
+      VpcId: !Ref YOUR_VPC_ID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref YOUR_SECURE_IP_RANGE
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: !Ref YOUR_SECURE_IP_RANGE
+
 
 Outputs:
 
@@ -461,4 +537,3 @@ Outputs:
     Value: !GetAtt FargateStack.Outputs.Name
     Export:
       Name: !Sub ${AWS::StackName}-FargateStackName
-

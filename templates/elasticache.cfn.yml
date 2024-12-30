@@ -1,4 +1,3 @@
----
 AWSTemplateFormatVersion: 2010-09-09
 
 # A CloudFormation template to create/configure an AWS ElastiCache Cluster based on parameters,
@@ -117,6 +116,7 @@ Resources:
       CacheSubnetGroupName: !Ref SubnetGroup
       VpcSecurityGroupIds:
         - !GetAtt SecurityGroup.GroupId
+      SnapshotRetentionLimit: 1
       Tags:
         - Key: Name
           Value: !Ref AWS::StackName

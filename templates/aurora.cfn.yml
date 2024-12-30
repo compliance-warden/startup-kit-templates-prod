@@ -1,4 +1,3 @@
----
 AWSTemplateFormatVersion: 2010-09-09
 
 Description: SASKV5N Aurora
@@ -207,6 +206,10 @@ Resources:
       Port: !If [ IsAuroraMySQL,  3306, 5432 ]
       VpcSecurityGroupIds:
         - Fn::ImportValue: !Sub ${NetworkStackName}-DatabaseGroupID
+      DeletionProtection: true
+      EnableIAMDatabaseAuthentication: true
+      AvailabilityZones: ["YOUR_AZ1", "YOUR_AZ2"]
+      BacktrackWindow: 86400
     DependsOn: DatabaseSubnetGroup
 
   AuroraInstance0:
@@ -224,6 +227,15 @@ Resources:
       Tags:
       - Key: Name
         Value: !Ref AWS::StackName
+      MultiAZ: true
+      DeletionProtection: true
+      EnableCloudwatchLogsExports:
+        - Audit
+        - Error
+        - General
+        - SlowQuery
+      EnableIAMDatabaseAuthentication: true
+      AutoMinorVersionUpgrade: true
     DependsOn: AuroraCluster
 
   AuroraInstance1:
@@ -242,6 +254,15 @@ Resources:
       Tags:
       - Key: Name
         Value: !Ref AWS::StackName
+      MultiAZ: true
+      DeletionProtection: true
+      EnableCloudwatchLogsExports:
+        - Audit
+        - Error
+        - General
+        - SlowQuery
+      EnableIAMDatabaseAuthentication: true
+      AutoMinorVersionUpgrade: true
     DependsOn: AuroraCluster
 
   DatabaseCpuAlarm:
@@ -405,4 +426,3 @@ Outputs:
     Value: !GetAtt DatabaseAlarmTopic.TopicName
     Export:
       Name: !Sub ${AWS::StackName}-DatabaseAlarmTopicName
-

@@ -57,5 +57,7 @@ Resources:
     Properties:
       DisplayName: STARTUP_KIT_DEVOPS
       TopicName: STARTUP_KIT_DEVOPS
-
-
+      KmsMasterKeyId: YOUR_KMS_KEY_ID
+      Tags:
+        - Key: YOUR_TAG_KEY
+          Value: YOUR_TAG_VALUE
