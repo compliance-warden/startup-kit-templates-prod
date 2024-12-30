@@ -1,9 +1,6 @@
----
 AWSTemplateFormatVersion: 2010-09-09
 
-
 Description: SASKV5 VPC + Bastion + Fargate + Database + ElastiCache
-
 
 Parameters:
 
@@ -28,7 +25,7 @@ Parameters:
     Type: String
     MinLength: 9
     MaxLength: 18
-    Default: 0.0.0.0/0
+    Default: YOUR_ALLOWED_IP_RANGE/32
 
   ELBIngressPort:
     Description: The ELB ingress port used by security groups
@@ -50,7 +47,7 @@ Parameters:
   KeyName:
     Description: EC2 key pair name for bastion host SSH access
     Type: AWS::EC2::KeyPair::KeyName
-    AllowedPattern : ".+"
+    AllowedPattern: ".+"
 
   LogRetentionInDays:
     Description: Number of days you would like your CloudWatch Logs to be retained
@@ -248,7 +245,7 @@ Parameters:
 
   # aurora.cfn.yml and/or db.cfn.yml parameters
   DatabaseUser:
-    Default: startupadmin
+    Default: YOUR_CUSTOM_ADMIN_USERNAME
     Type: String
     Description: Database admin account name
     MinLength: 5
@@ -287,7 +284,7 @@ Parameters:
       - mysql
 
   EncryptionAtRest:
-    Default: false
+    Default: true
     Type: String
     Description: The optional flag for encryption at rest (db.t2.small and above)
     ConstraintDescription: Only true or false are allowed
@@ -338,7 +335,7 @@ Parameters:
       - false
 
   DatabaseEnhancedMonitoring:
-    Default: false
+    Default: true
     Type: String
     Description: The optional flag for enhanced monitoring (additional charges apply - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Monitoring.OS.htm - aurora, postgres, mariadb, mysql)
     ConstraintDescription: Only true or false are allowed
@@ -441,7 +438,7 @@ Parameters:
     MaxValue: 15
     ConstraintDescription: Node count must be between 1 and 15
     Default: 1
-    
+
   AutoMinorVersionUpgrade:
     Description: Whether or not minor version upgrades to the cache engine should be applied automatically during the maintenance window.
     Type: String

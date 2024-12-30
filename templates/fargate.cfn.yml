@@ -1,24 +1,4 @@
----
 AWSTemplateFormatVersion: 2010-09-09
-
-# A CloudFormation template to create/configure an AWS Fargate Cluster, Application Load Balancer (ALB),
-# Amazon Elastic Container Registry (ECR), AWS CodePipeline and Service based on parameters. Optionally,
-# you can specify a domain name and/or an AWS Certificate Manager ARN can be passed if you want to
-# enable TLS on the ALB. If you want to create the DNS alias to the ALB, your DNS must be hosted in
-# Amazon Route 53.
-#
-# From the Startup Kit Templates, this template requires the name of an existing vpc.cfn.yml stack as
-# a parameter.
-#
-# If you pass the optional database stack name, it pulls the values for the DB endpoint and username
-# and sets them as environment variables in the container.
-#
-# The service creates CloudWatch Alarms to monitor CPU utilization in order to determine container
-# counts (up and down), but other metrics may be more important in your system.
-# See: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service_autoscaling_tutorial.html
-#
-# This template is released under Apache Version 2.0, and can be forked, copied, modified,
-# customized, etc. to match your application/system requirements.
 
 Description: SASKV5N Fargate
 
@@ -40,14 +20,14 @@ Parameters:
     Type: String
     Description: The Amazon Route 53 Hosted Zone Name for the optional load balancer alias record - do not include a period at the end
     Default: ""
-    AllowedPattern: "(^$|^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\\.)+[A-Za-z]{2,6}$)" # Allow for a blank or a domain name
+    AllowedPattern: "(^$|^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\\.)+[A-Za-z]{2,6}$)"
     ConstraintDescription: Please enter a valid Route 53 Hosted Zone Name
 
   LoadBalancerDomainName:
     Type: String
     Description: Domain name to create an Amazon Route 53 alias record for the load balancer
     Default: ""
-    AllowedPattern: "(^$|^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\\.)+[A-Za-z]{2,6}$)" # Allow for a blank or a domain name
+    AllowedPattern: "(^$|^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\\.)+[A-Za-z]{2,6}$)"
     ConstraintDescription: Please enter a valid domain name
 
   AppProtocol:
@@ -117,7 +97,6 @@ Parameters:
     MaxValue: 30720
     ConstraintDescription: "Value must be between 512 and 30720 - see: https://aws.amazon.com/fargate/pricing/"
 
-  # Scaling params
   DefaultServiceScaleEvaluationPeriods:
     Description: The number of periods over which data is compared to the specified threshold
     Type: Number
@@ -292,11 +271,6 @@ Resources:
                   - ecr:UploadLayerPart
                   - ecr:CompleteLayerUpload
 
-  # By default, the build specification is defined in this template, but you can also add buildspec.yml
-  # files in your repos to allow for customization.
-  # See:
-  # https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
-  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-codebuild-project-source.html
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -393,9 +367,6 @@ Resources:
       - CodePipelineArtifactBucket
       - FargateEcsCluster
 
-  # This CodePipeline is used for CodeCommit repos. It triggers on a commit to the Git branch passed,
-  # builds the Docker image and then deploys the container in the Fargate Cluster. CodePipeline can support N stages.
-  # For example, you may want to add a stage to test your build and/or container.
   CodePipelineCodeCommit:
     Type: AWS::CodePipeline::Pipeline
     Condition: IsCodeCommit
@@ -455,9 +426,6 @@ Resources:
       - CodePipelineServiceRole
       - DefaultFargateService
 
-  # This CodePipeline is used for GitHub based repos. It triggers on a commit to the Git branch passed,
-  # builds the Docker image and then deploys the container in the Fargate Cluster. CodePipeline can support N stages.
-  # For example, you may want to add a stage to test your build and/or container.
   CodePipelineGitHub:
     Type: AWS::CodePipeline::Pipeline
     Condition: IsGitHub
@@ -519,11 +487,10 @@ Resources:
       - CodePipelineServiceRole
       - DefaultFargateService
 
-  # Simple Amazon ECR Lifecycle Policies to try and reduce storage costs
-  # See: https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html
   EcrDockerRepository:
     Type: AWS::ECR::Repository
     Properties:
+      ImageTagMutability: IMMUTABLE
       LifecyclePolicy:
         LifecyclePolicyText: !Sub
           - |
@@ -561,9 +528,10 @@ Resources:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Ref AWS::StackName
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
 
-  # The ALB lives in two public subnets. See the existing vpc.cfn.yml stack
-  # for ELB/ALB and application security groups which define ingress ports.
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -592,7 +560,6 @@ Resources:
         DNSName: !GetAtt ApplicationLoadBalancer.DNSName
     DependsOn: ApplicationLoadBalancer
 
-  # The health checks can be further tuned if your requirements differ
   DefaultTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -623,7 +590,6 @@ Resources:
         Value: !Ref EnvironmentName
     DependsOn: ApplicationLoadBalancer
 
-  # The namespace in Amazon CloudWatch Logs - see https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogsConcepts.html
   DefaultLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -683,10 +649,7 @@ Resources:
           PortMappings:
             - ContainerPort:
                 Fn::ImportValue: !Sub ${NetworkStackName}-AppIngressPort
-
-          # Environment variables can be customized by adding parameters/values below. Secrets
-          # should be stored in AWS Systems Manager Parameter Store.
-          # See: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html
+          ReadonlyRootFilesystem: true
           Environment:
             - Name: BUCKET_NAME
               Value: !Ref DefaultContainerBucket
@@ -733,7 +696,7 @@ Resources:
     DependsOn:
       - FargateEcsCluster
       - DefaultFargateTaskDefinition
-      - LoadBalancerListener
+      - LoadBalancerListenerHTTPS
 
   ServiceAutoScalingRole:
     Type: AWS::IAM::Role
@@ -854,17 +817,32 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
-      Port:
-        Fn::ImportValue: !Sub ${NetworkStackName}-ELBIngressPort
-      Protocol: !If [ IsTlsEnabled, HTTPS, HTTP ]
-      Certificates:
-        - CertificateArn: !If [ IsTlsEnabled, !Ref SSLCertificateArn, !Ref "AWS::NoValue" ]
+      Port: 80
+      Protocol: HTTP
       DefaultActions:
-      - Type: forward
-        TargetGroupArn: !Ref DefaultTargetGroup
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: '443'
+            StatusCode: HTTP_301
     DependsOn:
-    - DefaultTargetGroup
-    - ApplicationLoadBalancer
+      - DefaultTargetGroup
+      - ApplicationLoadBalancer
+
+  LoadBalancerListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref DefaultTargetGroup
+    DependsOn:
+      - DefaultTargetGroup
+      - ApplicationLoadBalancer
 
   LBLatency:
     Type: AWS::CloudWatch::Alarm
@@ -995,4 +973,3 @@ Outputs:
     Value: !GetAtt CodePipelineArtifactBucket.Arn
     Export:
       Name: !Sub ${AWS::StackName}-CodePipelineArtifactBucketArn
-

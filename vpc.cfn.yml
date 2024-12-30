@@ -1,8 +1,6 @@
----
 AWSTemplateFormatVersion: 2010-09-09
 
 Description: SASKV5 VPC
-
 
 Parameters:
 
@@ -86,11 +84,9 @@ Metadata:
       EnvironmentName:
         default: Environment
 
-
 Conditions:
 
-   IsProd: !Equals [ !Ref EnvironmentName, prod ]
-
+  IsProd: !Equals [ !Ref EnvironmentName, prod ]
 
 Resources:
 
@@ -105,7 +101,11 @@ Resources:
         ELBIngressPort: !Ref ELBIngressPort
         AppIngressPort: !Ref AppIngressPort
         SingleNatGateway: !If [ IsProd, false, true ]
-
+      Tags:
+        - Key: YOUR_TAG_KEY_1
+          Value: YOUR_TAG_VALUE_1
+        - Key: YOUR_TAG_KEY_2
+          Value: YOUR_TAG_VALUE_2
 
 Outputs:
 
@@ -113,5 +113,3 @@ Outputs:
     Value: !GetAtt VpcStack.Outputs.Name
     Export:
       Name: !Sub ${AWS::StackName}-VpcStackName
-
-
